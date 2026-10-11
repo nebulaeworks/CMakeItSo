@@ -1,17 +1,13 @@
-FIND_PACKAGE(GTest)
-IF (${GTEST_FOUND})
-    MESSAGE(STATUS "GTest: Available")
-ELSE (${GTEST_FOUND})
-    MESSAGE(STATUS "Fetching GTest")
-    FETCHCONTENT_DECLARE(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG v1.14.0
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        FIND_PACKAGE_ARGS NAMES GTest
-    )
+include(findOrFetch)
 
-    FETCHCONTENT_MAKEAVAILABLE(googletest)
+find_or_fetch(GTest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.14.0
+    FOUND_VAR GTEST_FOUND
+    RESULT GTEST_RESULT
+)
+
+if(GTEST_RESULT STREQUAL "FETCHED")
     set(GTEST_ALIAS_TARGETS
         GTest::gtest
         GTest::gtest_main
@@ -31,4 +27,4 @@ ELSE (${GTEST_FOUND})
             endif()
         endif()
     endforeach()
-ENDIF (${GTEST_FOUND})
+endif()
