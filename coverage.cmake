@@ -6,18 +6,18 @@ function(add_coverage_stub REASON)
         VERBATIM)
 endfunction()
 
-# add_coverage_target(TESTS <exe> TARGETS <targets...> SOURCE_DIRS <dirs...>
+# add_coverage_target(TESTS <exes...> TARGETS <targets...> SOURCE_DIRS <dirs...>
 #                     [DEFAULT_ON_BUILD_TYPES <types...>])
-#   TESTS                  test executable, run to produce coverage data
+#   TESTS                  test executables, run (in order) to produce coverage data
 #   TARGETS                targets to instrument (libraries, executables, tests)
 #   SOURCE_DIRS            project-relative directories to include in the report
 #   DEFAULT_ON_BUILD_TYPES build types for which ENABLE_COVERAGE defaults to ON
 #
 # Always defines a `coverage` target. It produces a gcovr report into
-# <binary>/test/coverage/ when instrumentation is enabled, and otherwise
+# <binary>/Testing/coverage/ when instrumentation is enabled, and otherwise
 # reports why not and exits non-zero.
 function(add_coverage_target)
-    cmake_parse_arguments(COV "" "TESTS" "TARGETS;SOURCE_DIRS;DEFAULT_ON_BUILD_TYPES" ${ARGN})
+    cmake_parse_arguments(COV "" "" "TESTS;TARGETS;SOURCE_DIRS;DEFAULT_ON_BUILD_TYPES" ${ARGN})
 
     list(FIND COV_DEFAULT_ON_BUILD_TYPES "${CMAKE_BUILD_TYPE}" DEFAULT_ON_INDEX)
     if(DEFAULT_ON_INDEX EQUAL -1)
@@ -49,15 +49,20 @@ function(add_coverage_target)
         target_link_options(${COVERED_TARGET} PRIVATE --coverage)
     endforeach()
 
-    set(COVERAGE_DIR ${PROJECT_BINARY_DIR}/test/coverage)
+    set(COVERAGE_DIR ${PROJECT_BINARY_DIR}/Testing/coverage)
     set(GCOVR_FILTERS)
     foreach(SOURCE_DIR ${COV_SOURCE_DIRS})
         list(APPEND GCOVR_FILTERS --filter ${PROJECT_SOURCE_DIR}/${SOURCE_DIR}/)
     endforeach()
 
+    set(RUN_TESTS_COMMANDS)
+    foreach(TEST_EXE ${COV_TESTS})
+        list(APPEND RUN_TESTS_COMMANDS COMMAND "$<TARGET_FILE:${TEST_EXE}>")
+    endforeach()
+
     add_custom_target(coverage
         COMMAND ${CMAKE_COMMAND} -E make_directory ${COVERAGE_DIR}
-        COMMAND $<TARGET_FILE:${COV_TESTS}>
+        ${RUN_TESTS_COMMANDS}
         COMMAND ${GCOVR_EXECUTABLE}
                 --root ${PROJECT_SOURCE_DIR}
                 --object-directory ${PROJECT_BINARY_DIR}
