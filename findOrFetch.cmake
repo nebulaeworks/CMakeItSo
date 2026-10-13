@@ -41,7 +41,16 @@ function(find_or_fetch NAME)
         set(ARGS_FOUND_VAR ${NAME}_FOUND)
     endif()
 
-    find_package(${NAME} ${ARGS_FIND_PACKAGE_VERSION} QUIET)
+    # Deliberately excludes CMake's user/system package registries
+    # (~/.cmake/packages and the system equivalent). A fetched dependency
+    # that calls export(PACKAGE ...) in its own CMakeLists.txt (RapidJSON
+    # does) registers its *build tree* there -- so a later, unrelated
+    # configure (even of a different project) can "find" a stale pointer
+    # into a previous fetch's build directory instead of either a real
+    # system install or a clean new fetch. CMAKE_EXPORT_NO_PACKAGE_REGISTRY
+    # below stops that from happening for whatever this call fetches.
+    find_package(${NAME} ${ARGS_FIND_PACKAGE_VERSION} QUIET
+        NO_CMAKE_PACKAGE_REGISTRY NO_CMAKE_SYSTEM_PACKAGE_REGISTRY)
     if(${ARGS_FOUND_VAR})
         message(STATUS "${NAME}: Available")
         set(_FIND_OR_FETCH_RESULT FOUND)
@@ -53,6 +62,7 @@ function(find_or_fetch NAME)
             set(${_FIND_OR_FETCH_OPTION_NAME} ${_FIND_OR_FETCH_OPTION_VALUE} CACHE STRING "" FORCE)
         endforeach()
 
+        set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
         message(STATUS "Fetching ${NAME}")
         FetchContent_Declare(
             ${NAME}
@@ -60,6 +70,7 @@ function(find_or_fetch NAME)
             GIT_TAG ${ARGS_GIT_TAG}
             DOWNLOAD_EXTRACT_TIMESTAMP true
             FIND_PACKAGE_ARGS ${ARGS_FIND_PACKAGE_VERSION} NAMES ${ARGS_FIND_PACKAGE_NAMES}
+                NO_CMAKE_PACKAGE_REGISTRY NO_CMAKE_SYSTEM_PACKAGE_REGISTRY
         )
         FetchContent_MakeAvailable(${NAME})
         set(_FIND_OR_FETCH_RESULT FETCHED)
