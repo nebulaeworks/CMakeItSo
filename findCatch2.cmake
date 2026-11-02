@@ -2,7 +2,7 @@ include(findOrFetch)
 
 find_or_fetch(Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.4.0
+    GIT_TAG v3.16.1
     FIND_PACKAGE_VERSION 3
 )
 
