@@ -27,6 +27,7 @@ endfunction()
 #     ROOT <dir>
 #     OUTPUT_ROOT <dir>
 #     KINDS <names...>
+#     [SHARED <dirs...>]
 #     [LINK_MATCH <regex>]
 #     [LINK_DEFAULT <targets...>]
 #     [OUT_TARGETS <var>]
@@ -40,15 +41,29 @@ endfunction()
 # mirroring C++ namespaces under that directory stay in one binary rather
 # than each becoming its own.
 #
+# SHARED names directories, relative to ROOT, whose .cpp files (recursively)
+# are compiled into every discovered kind's executable, not just one -- for
+# test support code (a fixture type, say) more than one kind needs, which
+# can't otherwise cross between kinds' separate executables. Every
+# executable also gets ROOT itself as an include directory, so a test file
+# can reach a shared header by its path relative to ROOT regardless of how
+# deep the including file sits.
+#
 # The executable is named after its path relative to ROOT with '/' -> '_',
 # linked against Catch2 plus (if LINK_MATCH matches that relative path)
 # ${CMAKE_MATCH_1} from it, else LINK_DEFAULT if given. Its binary is placed
 # under OUTPUT_ROOT at that same relative path, and it's registered with
 # add_catch2_tests(). Matching target names are appended to OUT_TARGETS.
 function(discover_catch2_tests)
-    cmake_parse_arguments(ARGS "" "ROOT;OUTPUT_ROOT;LINK_MATCH;OUT_TARGETS" "KINDS;LINK_DEFAULT" ${ARGN})
+    cmake_parse_arguments(ARGS "" "ROOT;OUTPUT_ROOT;LINK_MATCH;OUT_TARGETS" "KINDS;SHARED;LINK_DEFAULT" ${ARGN})
 
     get_filename_component(ABS_ROOT "${ARGS_ROOT}" ABSOLUTE)
+
+    set(SHARED_SOURCES)
+    foreach(SHARED_DIR ${ARGS_SHARED})
+        file(GLOB_RECURSE DIR_SHARED_SOURCES CONFIGURE_DEPENDS "${ABS_ROOT}/${SHARED_DIR}/*.cpp")
+        list(APPEND SHARED_SOURCES ${DIR_SHARED_SOURCES})
+    endforeach()
 
     file(GLOB_RECURSE ALL_SOURCES CONFIGURE_DEPENDS "${ABS_ROOT}/*.cpp")
 
@@ -74,7 +89,8 @@ function(discover_catch2_tests)
 
         file(GLOB_RECURSE DIR_SOURCES CONFIGURE_DEPENDS "${ABS_ROOT}/${KIND_REL_DIR}/*.cpp")
 
-        add_executable(${TARGET_NAME} ${DIR_SOURCES})
+        add_executable(${TARGET_NAME} ${DIR_SOURCES} ${SHARED_SOURCES})
+        target_include_directories(${TARGET_NAME} PRIVATE ${ABS_ROOT})
         target_link_libraries(${TARGET_NAME} PRIVATE Catch2::Catch2WithMain)
 
         if(ARGS_LINK_MATCH AND "${KIND_REL_DIR}" MATCHES "${ARGS_LINK_MATCH}")
