@@ -72,6 +72,13 @@ function(add_coverage_target)
                 --object-directory ${PROJECT_BINARY_DIR}
                 ${GCOVR_FILTERS}
                 ${GCOVR_TOOL_ARGS}
+                # A templated function instantiated into more than one test
+                # binary can make gcov report a negative hit count when
+                # merging their .gcda files -- a known gcov bug
+                # (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68080), not
+                # a real coverage problem, so it's downgraded to a warning
+                # rather than failing the report.
+                --gcov-ignore-parse-errors negative_hits.warn
                 --html-details ${COVERAGE_DIR}/index.html
                 --print-summary
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
